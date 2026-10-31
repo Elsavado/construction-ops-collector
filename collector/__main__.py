@@ -7,11 +7,11 @@ import os
 import time
 import traceback
 
-from . import construction, courses, github, kaggle, library, models3d, named, public, techdocs
+from . import company, construction, courses, github, kaggle, library, models3d, named, public, techdocs
 from .common import Sink, State
 
 EXTRA = {**construction.SOURCES, **models3d.SOURCES, **courses.SOURCES, **named.SOURCES, **library.SOURCES, **techdocs.SOURCES, **kaggle.SOURCES, **github.SOURCES}
-ALL = list(public.SOURCES) + list(EXTRA)
+ALL = list(public.SOURCES) + list(EXTRA) + ["company"]
 
 
 def main():
@@ -44,7 +44,11 @@ def main():
             continue
         t0 = time.time()
         try:
-            if name in EXTRA:
+            if name == "company":
+                sec = st.section("company")
+                sec.setdefault("scale", a.scale)  # scale is fixed once the history starts
+                n, unit = company.build(sink, sec, a.months, sec["scale"], a.detail), "months"
+            elif name in EXTRA:
                 n, unit = EXTRA[name](sink, st.section("public")), "items"
             else:
                 n, unit = public.SOURCES[name](sink, st.section("public")), "items"

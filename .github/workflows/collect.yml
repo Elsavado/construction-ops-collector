@@ -15,6 +15,19 @@ on:
       model_sources:
         description: "3D / CAD / BIM sources (comma list, empty = skip)"
         default: "curated,polyhaven,ghmodels,objaverse,caddatasets"
+      company:
+        description: "build the fictional company (also needs repo variable COMPANY_LIVE=true)"
+        type: boolean
+        default: false
+      months:
+        description: "company months per run"
+        default: "120"
+      scale:
+        description: "company size (fixed once history starts)"
+        default: "2"
+      detail:
+        description: "telemetry and workspace density"
+        default: "1"
       minutes:
         description: "time budget per job (minutes)"
         default: "320"
@@ -84,3 +97,26 @@ jobs:
           budget=$(cat budget.txt)
           flag=$([ "$LIVE" = "true" ] && echo --live || echo "")
           python -m collector --sources "$SOURCES" --state state/models.json --budget-gb "$budget" --minutes "${{ inputs.minutes || 320 }}" $flag
+
+  company:
+    if: vars.COMPANY_LIVE == 'true' && (github.event_name == 'schedule' || inputs.company)
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency: company
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: ./.github/actions/rclone
+        with:
+          conf: ${{ secrets.RCLONE_CONF }}
+      - name: Build fictional company
+        env:
+          LIVE: ${{ vars.LIVE == 'true' && inputs.dry_run != true }}
+        run: |
+          budget=$(cat budget.txt)
+          flag=$([ "$LIVE" = "true" ] && echo --live || echo "--months 2")
+          python -m collector --sources company --state state/company.json --budget-gb "$budget" --minutes "${{ inputs.minutes || 320 }}"             --months "${{ inputs.months || '120' }}" --scale "${{ inputs.scale || '2' }}"             --detail "${{ inputs.detail || '1' }}" $flag
