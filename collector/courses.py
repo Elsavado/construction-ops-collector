@@ -44,7 +44,7 @@ def mit_ocw(sink, st, per_run=40, cap=3 * 2 ** 30):
                     done_set.add(url)
                     continue
                 time.sleep(1)
-                page = get(s, url)
+                page = get(s, url.rstrip("/") + "/download/")
                 zips = re.findall(r'href="([^"]+\.zip)"', page.text) if page else []
                 if not zips:
                     continue
