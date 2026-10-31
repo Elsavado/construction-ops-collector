@@ -1,0 +1,86 @@
+name: collect
+
+# Runs every 6 hours. Each job collects into the runner and moves files to Google Drive with rclone
+# as it goes. Uploads happen only when repo variable LIVE is "true"; otherwise it is a dry run.
+# This repository is public: logs print counts only.
+
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      public_sources:
+        description: "public data sources (comma list, empty = skip)"
+        default: "documents,fsds,peers,contracts,ecfr,eurostat,crawl,onet,caselaw,ocw,uci,kaggle_named,huggingface,kaggle,knowledge,techdocs,wikipedia,books,videos,stackexchange,records,eol,ghrepos,notebooks,apps,zenodo,opendata"
+      model_sources:
+        description: "3D / CAD / BIM sources (comma list, empty = skip)"
+        default: "curated,polyhaven,ghmodels,objaverse,caddatasets"
+      minutes:
+        description: "time budget per job (minutes)"
+        default: "320"
+      dry_run:
+        description: "force a dry run (no upload)"
+        type: boolean
+        default: false
+
+env:
+  REMOTE: "pax:Construction Operations Research"
+  PYTHONUNBUFFERED: "1"
+  PUBLIC_DEFAULT: "documents,fsds,peers,contracts,ecfr,eurostat,crawl,onet,caselaw,ocw,uci,kaggle_named,huggingface,kaggle,knowledge,techdocs,wikipedia,books,videos,stackexchange,records,eol,ghrepos,notebooks,apps,zenodo,opendata"
+  MODELS_DEFAULT: "curated,polyhaven,ghmodels,objaverse,caddatasets"
+
+jobs:
+  public:
+    if: github.event_name == 'schedule' || inputs.public_sources != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency: public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: LibreOffice (web-page documents are saved as PDF)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libreoffice-writer > /dev/null
+      - uses: ./.github/actions/rclone
+        with:
+          conf: ${{ secrets.RCLONE_CONF }}
+      - name: Collect
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          LIVE: ${{ vars.LIVE == 'true' && inputs.dry_run != true }}
+          SOURCES: ${{ inputs.public_sources || env.PUBLIC_DEFAULT }}
+        run: |
+          budget=$(cat budget.txt)
+          flag=$([ "$LIVE" = "true" ] && echo --live || echo "")
+          python -m collector --sources "$SOURCES" --state state/public.json --budget-gb "$budget" --minutes "${{ inputs.minutes || 320 }}" $flag
+
+  models:
+    if: github.event_name == 'schedule' || inputs.model_sources != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency: models
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: ./.github/actions/rclone
+        with:
+          conf: ${{ secrets.RCLONE_CONF }}
+      - name: Collect 3D models, CAD drawings and BIM files
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          LIVE: ${{ vars.LIVE == 'true' && inputs.dry_run != true }}
+          SOURCES: ${{ inputs.model_sources || env.MODELS_DEFAULT }}
+        run: |
+          budget=$(cat budget.txt)
+          flag=$([ "$LIVE" = "true" ] && echo --live || echo "")
+          python -m collector --sources "$SOURCES" --state state/models.json --budget-gb "$budget" --minutes "${{ inputs.minutes || 320 }}" $flag
