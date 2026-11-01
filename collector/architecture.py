@@ -35,7 +35,7 @@ MODEL_THEMES = {
                                r"mansion|bungalow|log cabin|chalet|townhouse|duplex|beach house|lake house",
     "Skyscrapers & Towers": r"skyscraper|high-?rise|tower block|office tower|office building|commercial building",
     "Apartments & City Blocks": r"apartment|condo|residential building|city block|downtown|cityscape|city scene",
-    "Construction Sites & Machinery": r"bconstructionb|under construction|scaffold|excavator|bulldozer|tower crane|crane truck|"
+    "Construction Sites & Machinery": r"\bconstruction\b|scaffold|excavator|bulldozer|tower crane|crane truck|"
                                       r"concrete mixer|rebar|building site|backhoe|steel frame|formwork",
     "Interiors": r"interior|living ?room|kitchen|bedroom|bathroom|lobby|office space",
     "Houses (other)": r"house|home|cottage|farmhouse|cabin",
