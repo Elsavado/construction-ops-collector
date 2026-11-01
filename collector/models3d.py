@@ -79,6 +79,9 @@ REPO_TOPICS = [  # GitHub topics of repositories that hold model files
     "architecture-models", "building-models", "furniture-models", "point-cloud-data", "photogrammetry",
     "autolisp", "autocad-lisp", "autocad-plugin", "cad-drawings", "cad-blocks", "dxf-files", "dwg-files",
     "librecad", "qcad", "freecad", "cad",
+    "architecture-3d", "archviz", "architectural-visualization", "parametric-architecture", "parametric-design",
+    "computational-design", "grasshopper3d", "house-design", "house-model", "building-3d", "3d-buildings",
+    "sketchup-models", "futuristic", "sci-fi-assets", "construction-3d",
 ]
 
 

@@ -14,7 +14,7 @@ on:
         default: "documents,fsds,peers,contracts,ecfr,eurostat,crawl,onet,caselaw,ocw,uci,kaggle_named,huggingface,kaggle,knowledge,techdocs,wikipedia,books,videos,stackexchange,records,eol,ghrepos,notebooks,apps,zenodo,opendata"
       model_sources:
         description: "3D / CAD / BIM sources (comma list, empty = skip)"
-        default: "curated,polyhaven,ghmodels,objaverse,caddatasets"
+        default: "archmodels,archimages,curated,polyhaven,ghmodels,objaverse,caddatasets"
       company:
         description: "build the fictional company (also needs repo variable COMPANY_LIVE=true)"
         type: boolean
@@ -40,7 +40,7 @@ env:
   REMOTE: "pax:Construction Operations Research"
   PYTHONUNBUFFERED: "1"
   PUBLIC_DEFAULT: "documents,fsds,peers,contracts,ecfr,eurostat,crawl,onet,caselaw,ocw,uci,kaggle_named,huggingface,kaggle,knowledge,techdocs,wikipedia,books,videos,stackexchange,records,eol,ghrepos,notebooks,apps,zenodo,opendata"
-  MODELS_DEFAULT: "curated,polyhaven,ghmodels,objaverse,caddatasets"
+  MODELS_DEFAULT: "archmodels,archimages,curated,polyhaven,ghmodels,objaverse,caddatasets"
 
 jobs:
   public:
@@ -88,9 +88,10 @@ jobs:
       - uses: ./.github/actions/rclone
         with:
           conf: ${{ secrets.RCLONE_CONF }}
-      - name: Collect 3D models, CAD drawings and BIM files
+      - name: Collect 3D models, CAD drawings, BIM files and architecture images
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           LIVE: ${{ vars.LIVE == 'true' && inputs.dry_run != true }}
           SOURCES: ${{ inputs.model_sources || env.MODELS_DEFAULT }}
         run: |
