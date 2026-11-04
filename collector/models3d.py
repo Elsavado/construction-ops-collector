@@ -5,6 +5,7 @@ import gzip
 import json
 import os
 
+from . import split
 from .common import get, safe, session
 from .github import _gh, _licensed, _search
 from .public import BIM, _download, meta_note
@@ -103,8 +104,8 @@ def ghmodels(sink, st, per_topic=4, per_repo=400, max_mb=100):
             if took >= per_topic or sink.full():
                 break
             name = repo["full_name"]
-            if name in done_set or not _licensed(repo) or repo.get("fork"):
-                continue
+            if name in done_set or not _licensed(repo) or repo.get("fork") or split.repo_owner(name) != "construction":
+                continue  # (split.py: a repository owned by the Asset Library Drive is left to it)
             done.append(name)
             done_set.add(name)
             tree = get(s, f"https://api.github.com/repos/{name}/git/trees/{repo['default_branch']}",
@@ -149,6 +150,8 @@ def curated(sink, st, per_repo=3000, max_mb=200):
     for repo, (folder, lic) in CURATED.items():
         if sink.full():
             break
+        if split.SHARED_REPOS.get(repo, "construction") != "construction":
+            continue  # a sample set the Asset Library Drive owns (split.py)
         r = get(s, f"https://api.github.com/repos/{repo}")
         if not r:
             continue
@@ -169,6 +172,8 @@ def curated(sink, st, per_repo=3000, max_mb=200):
 
 def polyhaven(sink, st, res="2k"):
     """Poly Haven 3D models (CC0): .blend, .fbx and .gltf with their textures, one folder per model."""
+    if split.POLYHAVEN_OWNER != "construction":
+        return 0  # Poly Haven belongs to the Asset Library Drive (split.py)
     s = session()
     r = get(s, "https://api.polyhaven.com/assets", params={"t": "models"})
     assets = r.json() if r else {}
@@ -239,6 +244,8 @@ def objaverse(sink, st, per_run=6000):
                 m = get(s, f"{HF}/metadata/{shard}.json.gz")
                 shards[shard] = json.loads(gzip.decompress(m.content)) if m else {}
             md = shards[shard].get(uid) or {}
+            if split.objaverse_owner(uid, md, {uid}) != "construction":
+                continue  # road vehicles and road furniture belong to the mobility Drive (split.py)
             lic = (md.get("license") or "").lower()
             if "nc" in lic.split("-") or "nd" in lic.split("-") or not any(x in lic for x in lic_ok):
                 continue

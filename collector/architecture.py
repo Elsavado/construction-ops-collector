@@ -13,6 +13,7 @@ import os
 import re
 import time
 
+from . import split
 from .common import get, safe, session
 from .models3d import HF, MODELS
 from .public import PUB, _download
@@ -73,7 +74,7 @@ def archmodels(sink, st, per_run=20000):
             if uid in taken or "nc" in lic.split("-") or "nd" in lic.split("-") or not any(x in lic for x in LIC_OK):
                 continue
             t = _theme(md)
-            if t:
+            if t and split.objaverse_owner(uid, md) == "construction":
                 c["queue"].append([uid, shard, themes.index(t), safe(md.get("name") or uid, 70), lic])
         c["scan"] += 1
         c["queue"].sort(key=lambda q: q[2])  # futuristic and new-gen themes first
@@ -82,6 +83,8 @@ def archmodels(sink, st, per_run=20000):
     cat = sink.state.data.setdefault("catalog", {}).setdefault("arch_models", {})
     while c["queue"] and n < per_run and not sink.full():
         uid, shard, ti, name, lic = c["queue"].pop(0)
+        if split.objaverse_owner(uid, {"name": name}) == "mobility":
+            continue  # queued before the split: a road vehicle / road object is the mobility Drive's
         if _download(s, f"{HF}/glbs/{shard}/{uid}.glb", 300 * 2 ** 20, sink, f"{ARCH}/{themes[ti]}/{name} {uid[:8]}.glb"):
             cat[uid] = lic
             n += 1
@@ -137,6 +140,8 @@ def _ext(url, default="jpg"):
 
 
 def _save(s, sink, url, theme, kind, q, source, title, e):
+    if split.building_image_owner(source, title, title) != "construction":
+        return 0  # the Asset Library's half of the shared building images, or a road sign (split.py)
     return 1 if _download(s, url, CAP, sink,
                           f"{IMAGES}/{theme}/{kind}/{safe(q.title(), 50)}/{source}/{safe(title, 100)}.{e}") else 0
 
